@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Show an IntUI tree in a running casement, and say what people do with it.
+#   hub map tree --json | casement-show            show a tree from stdin
+#   casement-show tree.json                         show a file
+#   casement-show --events                          then print each IntUI event as it happens (Ctrl-C to stop)
+# Port: $CASEMENT_PORT, default 9341 (start casement with --port 9341).
+set -eu
+port=${CASEMENT_PORT:-9341}
+watch=no
+file=-
+for arg in "$@"; do
+  case "$arg" in
+    --events) watch=yes ;;
+    *) file=$arg ;;
+  esac
+done
+if [ "$file" != "-" ] || [ ! -t 0 ]; then
+  reply=$(curl -s -w '\n%{http_code}' -X POST "localhost:$port/intui" --data-binary @"$file") || { echo "casement-show: nothing is listening on localhost:$port (start casement --port $port)" >&2; exit 1; }
+  code=${reply##*$'\n'}; body=${reply%$'\n'*}
+  [ "$code" = 200 ] || { echo "casement-show: casement refused the tree: $body" >&2; exit 1; }
+  echo "$body"
+fi
+if [ "$watch" = yes ]; then
+  while sleep 0.5; do curl -s "localhost:$port/events"; done
+fi

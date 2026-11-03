@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Keep a casement window in step with a command that prints an IntUI tree, and hand every IntUI event
+# people cause in it to a command of your own.
+#   casement-follow [--every SECONDS] [--on-event 'CMD'] -- hub map tree --json
+# Every SECONDS (default 5) the tree command runs; when its output changes, the new tree is posted to
+# casement (so a view the hub keeps current stays current). Each event from GET /events is written on
+# the stdin of CMD, one JSON line at a time (CMD runs once per event). Port: $CASEMENT_PORT, default 9341.
+set -eu
+every=5; on_event=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --every) every=$2; shift 2 ;;
+    --on-event) on_event=$2; shift 2 ;;
+    --) shift; break ;;
+    *) echo "casement-follow: unknown option $1 (usage: casement-follow [--every S] [--on-event CMD] -- tree-command ...)" >&2; exit 2 ;;
+  esac
+done
+[ $# -gt 0 ] || { echo "casement-follow: say which command prints the tree, after --" >&2; exit 2; }
+port=${CASEMENT_PORT:-9341}
+last=""
+while true; do
+  tree=$("$@") || { echo "casement-follow: '$*' failed; keeping the last tree" >&2; tree=$last; }
+  if [ "$tree" != "$last" ] && [ -n "$tree" ]; then
+    reply=$(printf '%s' "$tree" | curl -s -w '\n%{http_code}' -X POST "localhost:$port/intui" --data-binary @-) || { echo "casement-follow: nothing is listening on localhost:$port" >&2; exit 1; }
+    [ "${reply##*$'\n'}" = 200 ] && last=$tree || echo "casement-follow: casement refused the tree: ${reply%$'\n'*}" >&2
+  fi
+  events=$(curl -s "localhost:$port/events" || true)
+  if [ -n "$events" ] && [ -n "$on_event" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && printf '%s\n' "$line" | sh -c "$on_event"; done <<<"$events"
+  elif [ -n "$events" ]; then
+    printf '%s\n' "$events"
+  fi
+  sleep "$every"
+done

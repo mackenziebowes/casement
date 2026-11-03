@@ -1,0 +1,5 @@
+{"v":1,"root":{"type":"Group","direction":"column","children":[
+ {"type":"Flow","steps":[{"id":"model","label":"Model tokens"},{"id":"tree","label":"Component tree","detail":"Validated against the core schemas"},{"id":"render","label":"Renderer","detail":"One per surface"}],"links":[]},
+ {"type":"Form","id":"new-idea","fields":[{"id":"title","label":"Title","input":"text","required":true},{"id":"source","label":"Source","input":"select","options":["self","client"],"required":false}],"submitLabel":"Add idea"},
+ {"type":"Chart","kind":"line","title":"Visitors","unit":"visitors","series":[{"label":"This week","role":"primary","points":[{"x":"Mon","y":120},{"x":"Tue","y":180},{"x":"Wed","y":90}]},{"label":"Usual","role":"baseline","points":[{"x":"Mon","y":110},{"x":"Tue","y":115},{"x":"Wed","y":105}]}],"annotations":[{"at":"Tue","label":"New pricing page"}]}
+]}}

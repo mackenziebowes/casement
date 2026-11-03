@@ -1,0 +1,9 @@
+{"v":1,"root":{"type":"Group","direction":"column","children":[
+ {"type":"Text","markdown":"# Weekly check\n\nThe **soak** is running; nothing has moved."},
+ {"type":"Group","direction":"row","children":[
+  {"type":"Label","text":"build ok","tone":"positive"},
+  {"type":"Label","text":"soak 3h in","tone":"warning"}]},
+ {"type":"Stat","label":"Idle CPU","value":0.4,"unit":"%","tone":"positive"},
+ {"type":"Table","columns":[{"key":"n","label":"Name"},{"key":"v","label":"Value"}],"rows":[{"n":"paints","v":14},{"n":"callbacks","v":13}]},
+ {"type":"Choice","id":"next","prompt":"What next?","options":[{"id":"keep","label":"Keep going","emphasis":"primary"},{"id":"stop","label":"Stop"}]}
+]}}
