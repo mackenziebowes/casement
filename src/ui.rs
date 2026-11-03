@@ -162,10 +162,21 @@ pub struct BarMark {
     pub rect: Rect,
 }
 
+/// One run of a `Prose`: its words and whether they are bold or italic.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Run {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Panel { id: String, bounds: Rect, tone: Tone, children: Vec<Node> },
     Label { id: String, bounds: Rect, tone: Tone, text: String },
+    /// Wrapped words at `px` pixels (at scale 1) in which some runs are bold or italic: a Text the IntUI layout made.
+    /// Made by the layout (POST /intui), not posted as a node.
+    Prose { id: String, bounds: Rect, tone: Tone, px: u32, runs: Vec<Run> },
     /// A drawn form with its own colour, for a character or a sticker: not a tone, so it carries no meaning to a reader of
     /// the tree beyond its id. Anti-aliased.
     Blob { id: String, bounds: Rect, form: Form, fill: u32 },
@@ -187,7 +198,7 @@ pub enum Node {
 impl Node {
     pub fn id(&self) -> &str {
         match self {
-            Node::Panel { id, .. } | Node::Label { id, .. } | Node::Headline { id, .. } | Node::Blob { id, .. } | Node::Words { id, .. } | Node::Hotspot { id, .. } | Node::Button { id, .. } | Node::Bar { id, .. } | Node::Plot { id, .. } | Node::Input { id, .. } => id,
+            Node::Panel { id, .. } | Node::Label { id, .. } | Node::Prose { id, .. } | Node::Headline { id, .. } | Node::Blob { id, .. } | Node::Words { id, .. } | Node::Hotspot { id, .. } | Node::Button { id, .. } | Node::Bar { id, .. } | Node::Plot { id, .. } | Node::Input { id, .. } => id,
         }
     }
 
@@ -197,6 +208,7 @@ impl Node {
         match self {
             Node::Panel { id, bounds, tone, children } => Node::Panel { id: id.clone(), bounds: down(bounds), tone: *tone, children: children.iter().map(|c| c.shifted(dy)).collect() },
             Node::Label { id, bounds, tone, text } => Node::Label { id: id.clone(), bounds: down(bounds), tone: *tone, text: text.clone() },
+            Node::Prose { id, bounds, tone, px, runs } => Node::Prose { id: id.clone(), bounds: down(bounds), tone: *tone, px: *px, runs: runs.clone() },
             Node::Headline { id, bounds, tone, text } => Node::Headline { id: id.clone(), bounds: down(bounds), tone: *tone, text: text.clone() },
             Node::Hotspot { id, bounds } => Node::Hotspot { id: id.clone(), bounds: down(bounds) },
             Node::Blob { id, bounds, form, fill } => Node::Blob { id: id.clone(), bounds: down(bounds), form: *form, fill: *fill },
@@ -219,6 +231,7 @@ impl Node {
         match self {
             Node::Panel { id, bounds, tone, children } => json!({"id": id, "kind": "panel", "tone": tone.word(), "bounds": b(bounds), "children": children.iter().map(Node::to_json).collect::<Vec<_>>()}),
             Node::Label { id, bounds, tone, text } => json!({"id": id, "kind": "label", "tone": tone.word(), "bounds": b(bounds), "text": text}),
+            Node::Prose { id, bounds, tone, px, runs } => json!({"id": id, "kind": "prose", "tone": tone.word(), "bounds": b(bounds), "px": px, "text": runs.iter().map(|r| r.text.as_str()).collect::<String>(), "runs": runs.iter().map(|r| json!({"text": r.text, "bold": r.bold, "italic": r.italic})).collect::<Vec<_>>()}),
             Node::Headline { id, bounds, tone, text } => json!({"id": id, "kind": "headline", "tone": tone.word(), "bounds": b(bounds), "text": text}),
             Node::Hotspot { id, bounds } => json!({"id": id, "kind": "hotspot", "tone": "neutral", "bounds": b(bounds)}),
             Node::Blob { id, bounds, form, fill } => json!({"id": id, "kind": "blob", "tone": "neutral", "bounds": b(bounds), "form": form.to_json(), "fill": format!("#{fill:08X}")}),
@@ -250,6 +263,7 @@ impl Node {
             Some("button") => Ok(Node::Button { id, bounds, tone, label: text("text")? }),
             Some("bar") => Ok(Node::Bar { id: id.clone(), bounds, tone, reading: Reading::from_json(&id, &v["reading"])? }),
             Some("input") => Ok(Node::Input { id, bounds, caret: v["caret"].as_u64().unwrap_or(0) as usize, text: text("text")? }),
+            Some("prose") => Err(format!("prose {id}: prose is made by the IntUI layout (POST /intui), not posted as a node")),
             Some("plot") => Err(format!("plot {id}: a plot is made by the IntUI layout (POST /intui), not posted as a node")),
             other => Err(format!("node {id}: unknown kind {other:?} (panel, label, button, bar)")),
         }

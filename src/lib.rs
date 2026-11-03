@@ -5,4 +5,5 @@ pub mod intui_scene;
 pub mod pace;
 pub mod ui;
 pub mod paint;
+pub mod prose;
 pub mod text;

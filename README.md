@@ -33,8 +33,8 @@ curl localhost:9341/events                     # IntUI press events people cause
 3. `src/paint.rs`, `src/text.rs`: tone to colour, text with cosmic-text, drawn in device pixels at any fractional scale.
 4. `src/intui_scene.rs`: an IntUI tree (parsed by `../intui`) laid out as nodes.
 5. `src/inspect.rs`: the localhost socket.
-6. `bin/casement-show`: `hub map tree --json | casement-show` shows any IntUI tree in a running casement; `--events` prints what people do with it.
-7. `bin/casement-follow --every 5 --on-event 'CMD' -- hub map tree --json`: keeps the window in step with any command that prints a tree, and gives each IntUI event to CMD on stdin.
+6. `bin/casement-show`: `casement-show < rig/trees/mixed.json` shows any IntUI tree in a running casement; `--events` prints what people do with it.
+7. `bin/casement-follow --every 5 --on-event 'CMD' -- cat rig/trees/mixed.json`: keeps the window in step with any command that prints a tree, and gives each IntUI event to CMD on stdin.
 
 ## Checks (all drive the real program from outside)
 

@@ -6,7 +6,8 @@
 
 use crate::ui::{BarMark, Dot, Line, Shape, Node, Rect, Role, Tone};
 use intui_layout::{build_model, format_value, nice_step, Category, Scale};
-use intui_types::forms::{self, GroupDirection};
+use crate::prose;
+use intui_types::forms::{self, GroupDirection, Size};
 use intui_types::{Author, Drawn, Node as Kind};
 
 const MARGIN: i32 = 16;
@@ -66,41 +67,28 @@ pub fn layout(root: &Drawn, width: i32, height: i32, used: Memory) -> Node {
 
 /// How many lines `text` takes in `width`, by a guess at the glyph width (the painter really wraps).
 fn lines_of(text: &str, width: i32) -> i32 {
-    let per_line = (width / CHAR_W).max(1) as usize;
+    lines_at(text, width, CHAR_W)
+}
+
+fn lines_at(text: &str, width: i32, char_w: i32) -> i32 {
+    let per_line = (width / char_w).max(1) as usize;
     text.split('\n').map(|l| l.chars().count().div_ceil(per_line).max(1) as i32).sum()
+}
+
+/// A Text size as its pixel height and a guess at its average glyph width. Body keeps `CHAR_W`, so body rows are as tall as ever.
+fn size_of(size: Size) -> (i32, i32) {
+    match size {
+        Size::Small => (12, 6),
+        Size::Body => (14, CHAR_W),
+        Size::Heading => (19, 10),
+        Size::Title => (24, 12),
+    }
 }
 
 fn label(id: String, x: i32, y: i32, w: i32, tone: Tone, text: String, out: &mut Vec<Node>) -> i32 {
     let h = lines_of(&text, w) * LINE;
     out.push(Node::Label { id, bounds: Rect { x, y, w, h }, tone, text });
     h
-}
-
-/// A backslash before punctuation only stops Markdown reading it as a mark: `usage\_history` is read as `usage_history`.
-fn unescape(line: &str) -> String {
-    let mut out = String::with_capacity(line.len());
-    let mut chars = line.chars().peekable();
-    while let Some(c) = chars.next() {
-        match (c, chars.peek()) {
-            ('\\', Some(next)) if next.is_ascii_punctuation() => out.push(chars.next().unwrap_or(c)),
-            _ => out.push(c),
-        }
-    }
-    out
-}
-
-/// Markdown as the plain words a person reads: no heading marks, emphasis marks or code ticks.
-fn plain(markdown: &str) -> Vec<String> {
-    markdown
-        .split("\n\n")
-        .map(|para| {
-            para.lines()
-                .map(|l| unescape(&l.trim_start_matches('#').trim().replace("**", "").replace(['*', '`'], "")))
-                .collect::<Vec<_>>()
-                .join("\n")
-        })
-        .filter(|p| !p.is_empty())
-        .collect()
 }
 
 /// Lay `node` out at (x, y) in `w`; push what it draws into `out`; return its height.
@@ -112,12 +100,24 @@ fn lay(node: &Drawn, path: &str, x: i32, y: i32, w: i32, used_by: Memory, out: &
     match known {
         Kind::Label(l) => label(path.to_string(), x, y, w, tone_of(l.tone), l.text.clone(), out),
         Kind::Text(t) => {
+            let (px, char_w) = size_of(t.size);
+            let line = px * 10 / 7;
             let mut used = 0;
-            for (i, para) in plain(&t.markdown).into_iter().enumerate() {
+            for (i, runs) in prose::paragraphs(&t.markdown).into_iter().enumerate() {
                 if i > 0 {
                     used += GAP;
                 }
-                used += label(format!("{path}.p{i}"), x, y + used, w, Tone::Neutral, para, out);
+                let words: String = runs.iter().map(|r| r.text.as_str()).collect();
+                let h = lines_at(&words, w, char_w) * line;
+                let id = format!("{path}.p{i}");
+                let bounds = Rect { x, y: y + used, w, h };
+                // A plain paragraph at the body size is a Label, drawn as Text always was.
+                if t.size == Size::Body && runs.iter().all(|r| !r.bold && !r.italic) {
+                    out.push(Node::Label { id, bounds, tone: tone_of(t.tone), text: words });
+                } else {
+                    out.push(Node::Prose { id, bounds, tone: tone_of(t.tone), px: px as u32, runs });
+                }
+                used += h;
             }
             used
         }

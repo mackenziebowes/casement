@@ -47,7 +47,7 @@ type Casement = { kind: string; text?: string; children?: Casement[] }
 const casement: Casement = JSON.parse(readFileSync(casementPath, 'utf8'))
 const walk = (n: Casement): Casement[] => [n, ...(n.children ?? []).flatMap(walk)]
 const nodes = walk(casement)
-const casementWords = nodes.filter(n => n.kind === 'label' || n.kind === 'button').flatMap(n => words(n.text ?? ''))
+const casementWords = nodes.filter(n => n.kind === 'label' || n.kind === 'prose' || n.kind === 'button').flatMap(n => words(n.text ?? ''))
 const casementButtons = nodes.filter(n => n.kind === 'button').map(n => words(n.text ?? '').join(' '))
 
 if (process.env.DUMP) {

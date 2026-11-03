@@ -2,7 +2,7 @@
 //! Labels draw their text with `text.rs`, in a colour chosen to read against what they sit on.
 
 use crate::input::{Focus, Input, Keys, Pointer};
-use crate::text::{draw_text, text_width, Fonts};
+use crate::text::{draw_runs, draw_text, text_width, Fonts, Run};
 use crate::ui::{Form, BarMark, Dot, Line, Shape, Node, Reading, Rect, Role, Tone};
 
 /// 0xAARRGGBB.
@@ -239,6 +239,10 @@ fn paint_on(fonts: &mut Fonts, frame: &mut [u8], size: (u32, u32), node: &Node, 
         }
         Node::Words { bounds, px: size_px, ink, text, .. } => draw_text(fonts, frame, size, device(*bounds, scale), text, px(*size_px as i32, scale).max(1) as u32, *ink),
         Node::Headline { bounds, text, tone, .. } => draw_text(fonts, frame, size, device(*bounds, scale), text, px(28, scale).max(1) as u32, ink_for(*tone, behind)),
+        Node::Prose { bounds, tone, px: base, runs, .. } => {
+            let runs: Vec<Run> = runs.iter().map(|r| Run { text: &r.text, bold: r.bold, italic: r.italic }).collect();
+            draw_runs(fonts, frame, size, device(*bounds, scale), &runs, px(*base as i32, scale).max(1) as u32, ink_for(*tone, behind))
+        }
         Node::Label { bounds, text, tone, .. } => draw_text(fonts, frame, size, device(*bounds, scale), text, text_px, ink_for(*tone, behind)),
         Node::Input { id, bounds, text, caret } => {
             let at = device(*bounds, scale);

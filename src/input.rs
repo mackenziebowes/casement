@@ -112,7 +112,7 @@ fn contains(r: &Rect, x: i32, y: i32) -> bool {
 
 fn bounds(n: &Node) -> &Rect {
     match n {
-        Node::Panel { bounds, .. } | Node::Label { bounds, .. } | Node::Headline { bounds, .. } | Node::Blob { bounds, .. } | Node::Hotspot { bounds, .. } | Node::Words { bounds, .. } | Node::Button { bounds, .. } | Node::Bar { bounds, .. } | Node::Plot { bounds, .. } | Node::Input { bounds, .. } => bounds,
+        Node::Panel { bounds, .. } | Node::Label { bounds, .. } | Node::Prose { bounds, .. } | Node::Headline { bounds, .. } | Node::Blob { bounds, .. } | Node::Hotspot { bounds, .. } | Node::Words { bounds, .. } | Node::Button { bounds, .. } | Node::Bar { bounds, .. } | Node::Plot { bounds, .. } | Node::Input { bounds, .. } => bounds,
     }
 }
 
