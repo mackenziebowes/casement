@@ -136,12 +136,27 @@ fn lay(node: &Drawn, path: &str, x: i32, y: i32, w: i32, used_by: Memory, out: &
                 }
                 GroupDirection::Row => {
                     let n = kids.len() as i32;
-                    let each = ((w - GAP * (n - 1)) / n).max(0);
-                    kids.iter()
+                    let slots: Vec<intui_layout::Slot> = match &g.widths {
+                        Some(widths) => intui_layout::row_slots(w, GAP, widths, g.floors.as_deref().unwrap_or(&[])),
+                        None => {
+                            let each = ((w - GAP * (n - 1)) / n).max(0);
+                            (0..n).map(|i| intui_layout::Slot { x: i * (each + GAP), w: each }).collect()
+                        }
+                    };
+                    let used = kids
+                        .iter()
+                        .zip(&slots)
                         .enumerate()
-                        .map(|(i, kid)| lay(kid, &format!("{path}.children[{i}]"), x + i as i32 * (each + GAP), y, each, used_by, out))
+                        .map(|(i, (kid, slot))| lay(kid, &format!("{path}.children[{i}]"), x + slot.x, y, slot.w, used_by, out))
                         .max()
-                        .unwrap_or(0)
+                        .unwrap_or(0);
+                    if g.divider {
+                        for (i, pair) in slots.windows(2).enumerate() {
+                            let line = x + pair[0].x + pair[0].w + GAP / 2;
+                            out.push(Node::Panel { id: format!("{path}.divider[{i}]"), bounds: Rect { x: line, y, w: 1, h: used }, tone: Tone::Muted, children: Vec::new() });
+                        }
+                    }
+                    used
                 }
             }
         }
